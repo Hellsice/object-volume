@@ -254,7 +254,6 @@ for image in images:
     silhouettes_calibration.append(silhouette(image, background, threshold))
 plt.imshow(silhouettes_calibration[0])
 
-# %%
 def voxel_grid(size, offset1, offset2):
     x, y, z = np.mgrid[:size, :size, :size]
     pts = np.vstack((x.flatten(), y.flatten(), z.flatten())).astype(float)
