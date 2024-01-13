@@ -279,7 +279,7 @@ for projection, im in zip(P_calibration, silhouettes_calibration):
     fill, res = fill_grid(pts, projection, im)
     filled_calibration.append(fill)
 filled_calibration = np.vstack(filled_calibration)
-print(np.sum(filled_calibration, axis=0).max())
+print(f"Most amount of images on the same point {np.sum(filled_calibration, axis=0).max()}")
 
 def get_volume(pts, filled_grid, threshold, visualize):
     occupancy = np.sum(filled_grid, axis=0)
@@ -333,7 +333,7 @@ for projection, im in zip(P, silhouettes):
     fill = fill_grid(pts, projection, im)
     filled.append(fill)
 filled = np.vstack(filled)
-print(np.sum(filled, axis=0).max()) # indicated for volume threshold
+print(f"Most amount of images on the same point {np.sum(filled, axis=0).max()}")
 
 volume = get_volume(pts, filled, 5, False)
 actual_volume = ratio*volume
