@@ -1,4 +1,3 @@
-# %%
 import numpy as np
 import cv2 as cv
 import glob
@@ -12,12 +11,12 @@ import open3d as o3d
 from pyntcloud import PyntCloud
 from scipy.spatial.transform import Rotation
 
-# %% [markdown]
 # # Camera Calibration
 
-# %%
 def find_corners(images, chessboardSize):
-    '''Finds where in the images the chessboard corners are.'''
+    '''
+    Finds where in the images the chessboard corners are.
+    '''
     # termination criteria
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     
@@ -39,7 +38,9 @@ def find_corners(images, chessboardSize):
     return objpoints, imgpoints
 
 def camera_matrix_error(objpoints, imgpoints, rvecs, tvecs, cameraMatrix, dist):
-    '''Uses the points found with find_corners and the results from cv.calibrateCamera to project the chessboard and compare with the original to find the error in pixels'''
+    '''
+    Uses the points found with find_corners and the results from cv.calibrateCamera to project the chessboard and compare with the original to find the error in pixels
+    '''
     total_error = 0
     for i in range(len(objpoints)):
         imgpoints2, _ = cv.projectPoints(objpoints[i], rvecs[i], tvecs[i], cameraMatrix, dist)
@@ -55,11 +56,11 @@ def nested_change(item, func):
 
 
 def get_colmap_camera_matrix(folder, camera_type=None):
-    '''Function still in progress
-    
+    ''' 
     Grabs colmap camera matrix from file.
     Camera types: SIMPEL_RADIAL, PINHOLE, SIMPLE_PINHOLE
-    See https://colmap.github.io/cameras.html for further info.'''
+    See https://colmap.github.io/cameras.html for further info.
+    '''
     with open(folder + "/cameras.txt") as f:
         lines = f.readlines()
     if camera_type is not None:
@@ -85,7 +86,6 @@ def get_colmap_camera_matrix(folder, camera_type=None):
     
 
 
-# %%
 folder = "colmap reconstruction/space carving example"
 camera_type = None
 
@@ -93,9 +93,8 @@ colmap_camera_matrices = get_colmap_camera_matrix(folder, None)
 colmap_camera_matrices
 
 Camera_matrix = colmap_camera_matrices[0][1]
-Camera_matrix
+Camera_matrix_colmap
 
-# %%
 calibration_images = glob.glob('camera calibration/*.jpg')
 
 objpoints, imgpoints = find_corners(calibration_images, chessboardSize)
@@ -103,27 +102,21 @@ objpoints, imgpoints = find_corners(calibration_images, chessboardSize)
 # Construct camera matrix from found corners.
 ret, cameraMatrix, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, frameSize, None, None)
 
-# get camera matrix found by colmap
-# colmap_camera_matrix = get_colmap_camera_matrix("colmap reconstruction/volume calibration")
 
 # Save the camera calibration result
 pickle.dump((cameraMatrix, dist), open( "calibration.pkl", "wb" ))
 pickle.dump(cameraMatrix, open( "cameraMatrix.pkl", "wb" ))
 pickle.dump(dist, open( "dist.pkl", "wb" ))
 
-# %%
-cameraMatrix
+print(cameraMatrix)
 
-# %%
 print( "total error: {}".format(camera_matrix_error(objpoints, imgpoints, rvecs, tvecs, cameraMatrix, dist)) )
 
-# %% [markdown]
+
 # # Volume Calibration
 
-# %% [markdown]
 # ## Estimate R and t
 
-# %%
 def get_colmap_camera_pose(folder, file_type):
     '''Uses images.txt created by colmap to find the camera poses.
     path: path to folder, not file'''
@@ -152,7 +145,6 @@ def get_colmap_camera_pose(folder, file_type):
 
 camera_poses_calibration = get_colmap_camera_pose("colmap reconstruction/space carving example", "ppm")
 
-# %%
 def plot_camera_poses(camera_poses):
     '''Plots found camera poses.
     Can be used to check if poses are correct'''
@@ -186,96 +178,13 @@ def plot_camera_poses(camera_poses):
     ax.set_title('Camera Poses')
     plt.show()
 
-# %%
 plot_camera_poses(camera_poses_calibration)
 
-# %%
-P_calibration = Camera_matrix@camera_poses_calibration
-
-# %%
-#######
-'''Note:
-This code works, and can find camera poses. 
-But the camera poses are an arbitrary scale and don't use the same reference point.
-Hence, these poses are incorrect and should not be used.
-Code is kept as it can teach about keypoint matching
-'''
-
-# # Input directory containing images
-# input_dir = "volume calibration"
-
-# # Get a list of all image file paths in the directory
-# image_paths = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.endswith(".jpg")]
-
-# # Camera calibration matrix
-# K = cameraMatrix
-# # Feature detector and descriptor
-# detector = cv.SIFT_create()
-
-# # Create FLANN-based matcher
-# index_params = dict(algorithm=0, trees=5)  # Dummy value for 'algorithm'
-# search_params = dict(checks=50)
-# matcher = cv.FlannBasedMatcher(index_params, search_params)
-
-# # Find feature matches between image pairs
-# def match_images(img1, img2):
-#     kp1, des1 = detector.detectAndCompute(img1, None)
-#     kp2, des2 = detector.detectAndCompute(img2, None)
-#     matches = matcher.knnMatch(des1, des2, k=2)
-#     # Apply ratio test to filter good matches
-#     good_matches = []
-#     for m, n in matches:
-#         if m.distance < 0.7 * n.distance:
-#             good_matches.append(m)
-#     return kp1, kp2, good_matches
-
-# # Estimate camera poses from feature matches
-# def estimate_pose(kp1, kp2, matches):
-#     points1 = np.array([kp1[m.queryIdx].pt for m in matches])
-#     points2 = np.array([kp2[m.trainIdx].pt for m in matches])
-#     E, mask = cv.findEssentialMat(points1, points2, K)
-#     _, R, t, mask = cv.recoverPose(E, points1, points2, K)
-#     return R, t
+# use opencv camera calibration or colmap camera calibration
+P_calibration = Camera_matrix_colmap@camera_poses_calibration
+# P_calibration = cameraMatrix@camera_poses_calibration
 
 
-# # Resize image while maintaining aspect ratio
-# def resize_image(img, max_dim):
-#     height, width = img.shape[:2]
-#     if height > width:
-#         new_height = max_dim
-#         new_width = int(width * (max_dim / height))
-#     else:
-#         new_width = max_dim
-#         new_height = int(height * (max_dim / width))
-#     resized_img = cv.resize(img, (new_width, new_height))
-#     return resized_img
-
-# # Perform SFM pipeline
-# image_points = []
-# camera_poses_calibration = []
-# for i in range(len(image_paths)):
-#     # Load image
-#     img = cv.imread(image_paths[i])
-    
-#     # Resize image to reduce processing time
-#     max_dim = 1400
-#     resized_img = resize_image(img, max_dim)
-
-#     # Extract features and match with previous image
-#     if i == 0:
-#         image_points.append(None)
-#         camera_poses_calibration.append(np.eye(3, 4))
-#     else:
-#         kp1, kp2, matches = match_images(prev_img, resized_img)
-#         R, t = estimate_pose(kp1, kp2, matches)
-#         camera_poses_calibration.append(np.hstack((R, t)))
-    
-#     # Store current image for the next iteration
-#     prev_img = resized_img
-
-# P_calibration = K@camera_poses_calibration
-
-# %%
 def read_images(files):
     '''Reads the images with opencv and sets them in RGB format.'''
     images = []
@@ -350,7 +259,6 @@ def voxel_grid(size, offset1, offset2):
 
 pts = voxel_grid(120, 5, -0.62)
 
-# %%
 def fill_grid(pts, projection, silhouette):
     imgW, imgH = silhouette.shape
     uvs = projection @ pts
@@ -373,7 +281,6 @@ for projection, im in zip(P_calibration, silhouettes_calibration):
 filled_calibration = np.vstack(filled_calibration)
 print(np.sum(filled_calibration, axis=0).max())
 
-# %%
 def get_volume(pts, filled_grid, threshold, visualize):
     occupancy = np.sum(filled_grid, axis=0)
     pts = pts.T
@@ -394,87 +301,22 @@ def get_volume(pts, filled_grid, threshold, visualize):
     volume = convex_hull.volume
     return volume
 
-straal_bal = 0.067/2
-volume_bal = 3.14*(4/3)*straal_bal**3
-print(volume_bal)
-calibration_volume = volume_bal # in mm2, cm2, m2. user defined
+radius_ball = 0.067/2
+volume_ball = 3.14*(4/3)*radius_ball**3
+print(volume_ball)
+calibration_volume = volume_ball # in mm2, cm2, m2. user defined
 volume = get_volume(pts, filled_calibration, 24, True)
 ratio = calibration_volume/volume
 
-# %% [markdown]
+
 # # Actual volume
 
-# %%
-with open("colmap reconstruction/test item 2/images.txt") as f:
-    lines = f.readlines()
+camera_poses = get_colmap_camera_pose("colmap reconstruction/test item 2", "jpg")
 
-filtered_lines = [line for line in lines if "jpg" in line]
-
-numpy_array = []
-for line in filtered_lines:
-    values_except_name = line.split()[:-1]
-
-    try:
-        float_values = list(map(float, values_except_name))
-        numpy_array.append(float_values)
-    except ValueError as e:
-        print(f"Error converting values to floats: {e}")
-numpy_array = np.array(numpy_array)
-
-camera_poses = []
-for data in numpy_array:
-    quat = data[1:5]
-    R = Rotation.from_quat(quat).as_matrix()
-    t = data[5:-1]
-    pose = np.hstack((R,t.reshape(-1,1)))
-    camera_poses.append(pose)
-
-# %%
 plot_camera_poses(camera_poses)
-
-# %%
-# Input directory containing images
-input_dir = "images/set 2"
-
-# Get a list of all image file paths in the directory
-image_paths = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.endswith(".jpg")]
-
-# Camera calibration matrix
-K = cameraMatrix
-# Feature detector and descriptor
-detector = cv.SIFT_create()
-
-# Create FLANN-based matcher
-index_params = dict(algorithm=0, trees=5)  # Dummy value for 'algorithm'
-search_params = dict(checks=50)
-matcher = cv.FlannBasedMatcher(index_params, search_params)
-
-# Perform SFM pipeline
-image_points = []
-camera_poses = []
-for i in range(len(image_paths)):
-    # Load image
-    img = cv.imread(image_paths[i])
-    
-    # Resize image to reduce processing time
-    max_dim = 1400
-    resized_img = resize_image(img, max_dim)
-
-    # Extract features and match with previous image
-    if i == 0:
-        image_points.append(None)
-        camera_poses.append(np.eye(3, 4))
-    else:
-        kp1, kp2, matches = match_images(prev_img, resized_img)
-        R, t = estimate_pose(kp1, kp2, matches)
-        camera_poses.append(np.hstack((R, t)))
-    
-    # Store current image for the next iteration
-    prev_img = resized_img
 
 P = K@camera_poses
 
-# %%
 images = read_volume_images(glob.glob("images/set 2/*.jpg"))
 background = [117/255, 72/255, 131/255] # most common RGB value of background
 threshold = 0.6 #adjust to make image visible
@@ -484,10 +326,8 @@ for image in images:
     silhouettes.append(silhouette(image, background, threshold))
 plt.imshow(silhouettes[0])
 
-# %%
 pts = voxel_grid(120, 1, 0)
 
-# %%
 filled = []
 for projection, im in zip(P, silhouettes):
     fill = fill_grid(pts, projection, im)
@@ -495,23 +335,8 @@ for projection, im in zip(P, silhouettes):
 filled = np.vstack(filled)
 print(np.sum(filled, axis=0).max()) # indicated for volume threshold
 
-# %%
 volume = get_volume(pts, filled, 5, False)
 actual_volume = ratio*volume
 print(actual_volume)
-
-# %%
-straal_bal = 0.067/2
-volume_bal = 3.14*(4/3)*straal_bal**3
-print(volume_bal)
-
-# %%
-print(straal_bal)
-
-# %%
-diameter_cilinder = 0.036
-hoogte = 0.044
-volume = (diameter_cilinder/2)**2*3.14*hoogte
-print(volume)
 
 
