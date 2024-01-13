@@ -11,7 +11,9 @@ import open3d as o3d
 from pyntcloud import PyntCloud
 from scipy.spatial.transform import Rotation
 
-# # Camera Calibration
+######################
+# Camera calibration #
+######################
 
 def find_corners(images, chessboardSize):
     '''
@@ -102,7 +104,6 @@ objpoints, imgpoints = find_corners(calibration_images, chessboardSize)
 # Construct camera matrix from found corners.
 ret, cameraMatrix, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, frameSize, None, None)
 
-
 # Save the camera calibration result
 pickle.dump((cameraMatrix, dist), open( "calibration.pkl", "wb" ))
 pickle.dump(cameraMatrix, open( "cameraMatrix.pkl", "wb" ))
@@ -113,13 +114,21 @@ print(cameraMatrix)
 print( "total error: {}".format(camera_matrix_error(objpoints, imgpoints, rvecs, tvecs, cameraMatrix, dist)) )
 
 
-# # Volume Calibration
+######################
+# Volume Calibration #
+######################
 
-# ## Estimate R and t
+##########################
+#    Estimate R and T    #
+# For calibration images #
+##########################
+
 
 def get_colmap_camera_pose(folder, file_type):
-    '''Uses images.txt created by colmap to find the camera poses.
-    path: path to folder, not file'''
+    '''
+    Uses images.txt created by colmap to find the camera poses.
+    path: path to folder, not file
+    '''
     with open(folder +"/images.txt") as f:
         lines = f.readlines()
     filtered_lines = [line for line in lines if file_type in line]
@@ -146,8 +155,10 @@ def get_colmap_camera_pose(folder, file_type):
 camera_poses_calibration = get_colmap_camera_pose("colmap reconstruction/space carving example", "ppm")
 
 def plot_camera_poses(camera_poses):
-    '''Plots found camera poses.
-    Can be used to check if poses are correct'''
+    '''
+    Plots found camera poses.
+    Can be used to check if poses are correct
+    '''
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -186,7 +197,9 @@ P_calibration = Camera_matrix_colmap@camera_poses_calibration
 
 
 def read_images(files):
-    '''Reads the images with opencv and sets them in RGB format.'''
+    '''
+    Reads the images with opencv and sets them in RGB format.
+    '''
     images = []
     for f in files:
         im = cv.imread(f, cv.IMREAD_UNCHANGED).astype(float)
@@ -195,8 +208,10 @@ def read_images(files):
     return images
 
 def silhouette(image, background, threshold):
-    '''Creates a silhouette by subtracting a set of rgb values from each pixel.
-    It sets all pixels below the threshold to 0 and above to 1.'''
+    '''
+    Creates a silhouette by subtracting a set of rgb values from each pixel.
+    It sets all pixels below the threshold to 0 and above to 1.
+    '''
     im = image.copy()
     temp = np.abs(im-background)
     temp = np.sum(temp, axis=2)
@@ -212,8 +227,10 @@ def silhouette(image, background, threshold):
     return im
 
 def get_background_colour(image):
-    '''Grabs the rgb values of the most dominant colour in the image.
-    This can be used to background filter if the image background is uniform in colour'''
+    '''
+    Grabs the rgb values of the most dominant colour in the image.
+    This can be used to background filter if the image background is uniform in colour
+    '''
     pixels=np.float32(image.reshape(-1,3))
     n_colors = 2 # colour groups
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 200, .1)
@@ -227,6 +244,7 @@ def get_background_colour(image):
 
 
 images = read_images(glob.glob("data/*.ppm"))
+
 background = [0.0, 0.0, 0.75] # most common RGB value of background, divided by 255
 # background = get_background_colour(images[0]) # get most dominant colour in image
 threshold = 1.1 #adjust to make image visible
@@ -301,7 +319,7 @@ def get_volume(pts, filled_grid, threshold, visualize):
     volume = convex_hull.volume
     return volume
 
-radius_ball = 0.067/2
+radius_ball = 0.067/2  #Measured radius of reference object
 volume_ball = 3.14*(4/3)*radius_ball**3
 print(volume_ball)
 calibration_volume = volume_ball # in mm2, cm2, m2. user defined
@@ -309,13 +327,17 @@ volume = get_volume(pts, filled_calibration, 24, True)
 ratio = calibration_volume/volume
 
 
-# # Actual volume
+#################
+# Actual Volume #
+#################
 
 camera_poses = get_colmap_camera_pose("colmap reconstruction/test item 2", "jpg")
 
 plot_camera_poses(camera_poses)
 
-P = K@camera_poses
+# use opencv camera calibration or colmap camera calibration
+P_calibration = Camera_matrix_colmap@camera_poses
+# P_calibration = cameraMatrix@camera_poses
 
 images = read_volume_images(glob.glob("images/set 2/*.jpg"))
 background = [117/255, 72/255, 131/255] # most common RGB value of background
