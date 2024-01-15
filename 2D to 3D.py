@@ -93,7 +93,7 @@ camera_type = None
 colmap_camera_matrices = get_colmap_camera_matrix(folder_path, None)
 colmap_camera_matrices
 
-Camera_matrix = colmap_camera_matrices[0][1]
+Camera_matrix_colmap = colmap_camera_matrices[0][1]
 Camera_matrix_colmap
 
 calibration_images = glob.glob('camera calibration/*.jpg')
