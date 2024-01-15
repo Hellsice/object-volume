@@ -4,7 +4,6 @@ import glob
 import pickle
 import numpy as np
 import os
-import pyvista as pv
 import pandas as pd
 import matplotlib.pyplot as plt
 import open3d as o3d
@@ -57,13 +56,13 @@ def nested_change(item, func):
     return func(item)
 
 
-def get_colmap_camera_matrix(folder, camera_type=None):
+def get_colmap_camera_matrix(folder_path, camera_type=None):
     ''' 
     Grabs colmap camera matrix from file.
     Camera types: SIMPEL_RADIAL, PINHOLE, SIMPLE_PINHOLE
     See https://colmap.github.io/cameras.html for further info.
     '''
-    with open(folder + "/cameras.txt") as f:
+    with open(folder_path + "/cameras.txt") as f:
         lines = f.readlines()
     if camera_type is not None:
         filtered_lines = [line for line in lines if camera_type in line]
@@ -88,10 +87,10 @@ def get_colmap_camera_matrix(folder, camera_type=None):
     
 
 
-folder = "colmap reconstruction/space carving example"
+folder_path = "colmap reconstruction/space carving example"
 camera_type = None
 
-colmap_camera_matrices = get_colmap_camera_matrix(folder, None)
+colmap_camera_matrices = get_colmap_camera_matrix(folder_path, None)
 colmap_camera_matrices
 
 Camera_matrix = colmap_camera_matrices[0][1]
@@ -124,12 +123,12 @@ print( "total error: {}".format(camera_matrix_error(objpoints, imgpoints, rvecs,
 ##########################
 
 
-def get_colmap_camera_pose(folder, file_type):
+def get_colmap_camera_pose(folder_path, file_type):
     '''
     Uses images.txt created by colmap to find the camera poses.
-    path: path to folder, not file
+    file_type: type of image files used for colmap
     '''
-    with open(folder +"/images.txt") as f:
+    with open(folder_path +"/images.txt") as f:
         lines = f.readlines()
     filtered_lines = [line for line in lines if file_type in line]
     numpy_array = []
