@@ -1,4 +1,4 @@
-import numpy as np
+def numpy as np
 import cv2 as cv
 import glob
 import pickle
@@ -286,7 +286,7 @@ def fill_grid(pts, projection, silhouette):
     indices = np.where(good)[0]
     fill = np.zeros(uvs.shape[1])
     sub_uvs = uvs[:2, indices]
-    res = im[sub_uvs[1, :], sub_uvs[0, :]]
+    res = silhouette[sub_uvs[1, :], sub_uvs[0, :]]
     fill[indices] = res
     return fill, res
 
